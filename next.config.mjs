@@ -12,7 +12,12 @@ const nextConfig = {
     ];
   },
   images: {
-    domains: ["localhost"],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: process.env.NEXT_PUBLIC_APP_URL,
+      },
+    ],
   },
 };
 

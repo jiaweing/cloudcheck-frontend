@@ -4,6 +4,7 @@ import { CursorClickIcon } from "@/components/icons/cursor-click";
 import { ScanTextIcon } from "@/components/icons/scan-text";
 import { WordPullUp } from "@/components/text/word-pull-up";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
   Carousel,
@@ -199,22 +200,13 @@ export default function PitchDeck() {
 
           {/* Call to Action Slide */}
           <CarouselItem>
-            <Card className="flex h-screen w-full flex-col items-center justify-center bg-transparent border-none">
-              <div className="text-center">
-                <h2 className="text-5xl font-bold mb-8 text-foreground">
-                  Try CloudCheck Today
-                </h2>
-                <div className="space-y-6 text-xl text-muted-foreground max-w-2xl mx-auto mb-12">
-                  <p>Verify the authenticity of your images with confidence</p>
-                  <p>Enhanced trust and security in online media</p>
-                </div>
-                <a href="/dashboard">
-                  <button className="px-8 py-4 bg-blue-500 text-foreground rounded-lg hover:bg-blue-600 transition-all transform hover:scale-105 font-semibold text-lg">
-                    Get Started
-                  </button>
-                </a>
-              </div>
-            </Card>
+            <div className="w-full min-h-screen bg-background flex flex-col items-center justify-center gap-8">
+              <Cloud className="w-12 h-12" />
+              <h1 className="text-2xl md:text-5xl font-medium text-center max-w-2xl">
+                Detect the undetectable. Trust every pixel.
+              </h1>
+              <Button size="lg">Get Started</Button>
+            </div>
           </CarouselItem>
         </CarouselContent>
         <div className="absolute bottom-14 left-1/2 transform -translate-x-1/2">
