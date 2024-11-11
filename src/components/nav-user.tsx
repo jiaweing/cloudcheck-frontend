@@ -5,7 +5,7 @@ import authService from "@/services/auth-service";
 import { ChevronsUpDown, LogOut, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { ThemeToggle } from "./theme-toggle";
+import { ThemeToggleNav } from "./theme-toggle-nav";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import {
   DropdownMenu,
@@ -113,9 +113,7 @@ export function NavUser() {
                   Notifications
                 </a>
               </DropdownMenuItem> */}
-              <DropdownMenuItem>
-                <ThemeToggle />
-              </DropdownMenuItem>
+              <ThemeToggleNav />
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={logout}>
