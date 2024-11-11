@@ -47,7 +47,7 @@ export default function PitchDeck() {
           <ImageClassifierSlide />
           <CTA />
         </CarouselContent>
-        <SlideToolbar />
+        <SlideToolbar current={current} count={count} />
       </Carousel>
     </div>
   );

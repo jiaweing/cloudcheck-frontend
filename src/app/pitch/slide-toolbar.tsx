@@ -1,7 +1,13 @@
 import { ThemeToggle } from "@/components/theme-toggle";
 import { CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
-export default function SlideToolbar() {
+export default function SlideToolbar({
+  current,
+  count,
+}: {
+  current: number;
+  count: number;
+}) {
   return (
     <>
       {/* <div className="absolute bottom-14 left-1/2 transform -translate-x-1/2">
