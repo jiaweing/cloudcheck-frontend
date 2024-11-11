@@ -3,16 +3,14 @@ import { ScanTextIcon } from "lucide-react";
 import QRCode from "react-qr-code";
 
 export default function QRCodeSlide() {
+  const pitchUrl = `${process.env.NEXT_PUBLIC_APP_URL}/pitch`;
   return (
     <CarouselItem>
       <div className="w-full min-h-screen bg-background flex flex-col items-center justify-center gap-6">
         <ScanTextIcon />
         <div className="w-48 h-48">
           <QRCode
-            value={
-              process.env.NEXT_PUBLIC_APP_URL ??
-              "https://cloudcheckapp.vercel.app"
-            }
+            value={pitchUrl}
             style={{ height: "auto", maxWidth: "100%", width: "100%" }}
             viewBox={`0 0 256 256`}
             className="dark:invert"
@@ -30,12 +28,12 @@ export default function QRCodeSlide() {
             </div>
           </div>
           <a
-            href={process.env.NEXT_PUBLIC_APP_URL}
+            href={pitchUrl}
             className="text-primary"
             target="_blank"
             rel="noopener noreferrer"
           >
-            {process.env.NEXT_PUBLIC_APP_URL}
+            {pitchUrl}
           </a>
         </div>
         <p className="text-sm text-muted-foreground mt-12">
