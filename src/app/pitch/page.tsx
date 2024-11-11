@@ -40,12 +40,12 @@ export default function PitchDeck() {
         <CarouselContent>
           <Intro />
           <Team />
-          <InteractiveDemo />
-          <QRCodeSlide />
           <Misinformation />
           <DashboardDemo />
           <ImageClassifierSlide />
           <CTA />
+          <InteractiveDemo />
+          <QRCodeSlide />
         </CarouselContent>
         <SlideToolbar current={current} count={count} />
       </Carousel>
