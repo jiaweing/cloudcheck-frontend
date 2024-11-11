@@ -1,5 +1,6 @@
 "use client";
 
+import { FileUploader } from "@/components/file-uploader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -13,7 +14,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import ImageClassifierService from "@/services/image-checker-service";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export default function ImageClassifier() {
@@ -26,22 +27,22 @@ export default function ImageClassifier() {
   const [openDialog, setOpenDialog] = useState(false);
   const [isTrainingModel, setIsTrainingModel] = useState(false);
 
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleImageUpload = async (files: File[]) => {
+    const file = files[0];
     if (file) {
       setSelectedImage(file);
       setClassificationResult(null);
+      // Automatically classify the image when uploaded
+      await classifyImage(file);
     }
   };
 
-  const classifyImage = async () => {
-    if (selectedImage) {
+  const classifyImage = async (imageFile: File = selectedImage!) => {
+    if (imageFile) {
       setIsClassifying(true);
       try {
         const result = await ImageClassifierService.classify_image(
-          selectedImage,
+          imageFile,
           0
         );
         setClassificationResult(result === 0 ? "Fake" : "Real");
@@ -113,29 +114,13 @@ export default function ImageClassifier() {
             </div>
           ) : (
             <div className="space-y-4">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="hidden"
-                ref={inputRef}
+              <FileUploader
+                maxFileCount={1}
+                maxSize={5 * 1024 * 1024}
+                accept={{ "image/*": [] }}
+                onUpload={handleImageUpload}
+                disabled={isClassifying || isTrainingModel}
               />
-              <div className="flex gap-4">
-                <Button
-                  onClick={() => inputRef.current?.click()}
-                  variant="outline"
-                >
-                  Choose Image
-                </Button>
-                {selectedImage && (
-                  <Button
-                    onClick={classifyImage}
-                    disabled={isClassifying || isTrainingModel}
-                  >
-                    {isClassifying ? "Classifying..." : "Classify Image"}
-                  </Button>
-                )}
-              </div>
 
               {selectedImage && (
                 <div className="mt-4">
@@ -150,7 +135,7 @@ export default function ImageClassifier() {
                 </div>
               )}
 
-              {classificationResult && (
+              {selectedImage && classificationResult && (
                 <div className="mt-4 space-y-4">
                   <div className="p-4 bg-muted rounded-lg">
                     <h3 className="font-semibold mb-2">
