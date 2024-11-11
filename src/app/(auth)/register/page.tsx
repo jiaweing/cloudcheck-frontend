@@ -241,10 +241,10 @@ export default function RegisterPage() {
       <Dialog open={termsOpen} onOpenChange={setTermsOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Terms of Service and Data Use</DialogTitle>
+            <DialogTitle>Terms of Service and Privacy Policy</DialogTitle>
             <DialogDescription className="space-y-4">
-              <p>By checking the box below, you agree to the following:</p>
-              <div className="space-y-2">
+              <p>By checking the box, you agree to the following:</p>
+              <div className="space-y-4">
                 <p>
                   1. Data Collection: We use federated learning to collect
                   anonymized, aggregated data insights from your usage to
@@ -255,8 +255,8 @@ export default function RegisterPage() {
                   not directly accessed by our servers.
                 </p>
                 <p>
-                  3. Consent: Clicking "I Accept" indicates your consent to
-                  these terms.
+                  3. Consent: Ticking the "I agree" checkbox indicates your
+                  consent to these terms.
                 </p>
               </div>
             </DialogDescription>
