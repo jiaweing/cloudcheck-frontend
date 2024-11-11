@@ -12,9 +12,9 @@ export default function DashboardDemo() {
               className="absolute top-0 left-0 w-full h-full rounded-xl"
             />
           </div>
-          <h2 className="md:text-2xl text-lg font-medium mb-12 text-center text-foreground">
+          {/* <h2 className="md:text-2xl text-lg font-medium mb-12 text-center text-foreground">
             Dashboard
-          </h2>
+          </h2> */}
         </div>
       </Card>
     </CarouselItem>

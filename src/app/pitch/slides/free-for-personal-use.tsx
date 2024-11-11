@@ -17,7 +17,7 @@ export default function FreeForPersonalUse() {
             width={60}
             height={60}
             alt="Developer"
-            className="xl:absolute left-[35rem] top-14"
+            className="xl:absolute left-[33rem] top-14"
           />
         </div>
       </div>

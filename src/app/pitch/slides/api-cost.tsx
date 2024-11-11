@@ -15,7 +15,7 @@ export default function APICost() {
             width={60}
             height={60}
             alt="Magnifying Glass"
-            className="xl:absolute left-[25rem] top-14"
+            className="xl:absolute left-[26rem] top-14"
           />
         </div>
       </div>

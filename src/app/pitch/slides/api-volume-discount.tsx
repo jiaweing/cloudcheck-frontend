@@ -14,7 +14,7 @@ export default function APIVolumeDiscount() {
             width={60}
             height={60}
             alt="Money Bag"
-            className="xl:absolute left-[46rem] -top-2"
+            className="xl:absolute left-[44rem] -top-2"
           />
         </div>
       </div>

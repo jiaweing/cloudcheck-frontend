@@ -14,7 +14,7 @@ export default function SubscriptionLimits() {
             width={60}
             height={60}
             alt="Up Arrow"
-            className="xl:absolute left-[45rem] -top-2"
+            className="xl:absolute left-[43rem] -top-2"
           />
         </div>
       </div>
