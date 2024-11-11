@@ -5,8 +5,9 @@ export function middleware(request: NextRequest) {
   // Get token from cookies
   const token = request.cookies.get("token")?.value;
   const isAuthPage =
-    request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/register");
+    request.nextUrl.pathname.startsWith("/auth/login") ||
+    request.nextUrl.pathname.startsWith("/auth/register");
+  const is404Page = request.nextUrl.pathname.startsWith("/404");
   const isDashboardPage = request.nextUrl.pathname.startsWith("/dashboard");
 
   // If trying to access auth pages while logged in, redirect to dashboard
@@ -14,14 +15,14 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // If trying to access dashboard pages while logged out, redirect to login
-  if (isDashboardPage && !token) {
-    const response = NextResponse.redirect(new URL("/login", request.url));
-    // Clear any invalid tokens
-    response.cookies.delete("token");
-    response.cookies.delete("userId");
-    return response;
-  }
+  // // If trying to access dashboard pages while logged out, redirect to login
+  // if (isDashboardPage && !token) {
+  //   const response = NextResponse.redirect(new URL("/dashboard", request.url));
+  //   // Clear any invalid tokens
+  //   response.cookies.delete("token");
+  //   response.cookies.delete("userId");
+  //   return response;
+  // }
 
   // If accessing root path while logged in, redirect to dashboard
   if (request.nextUrl.pathname === "/" && token) {
@@ -30,7 +31,12 @@ export function middleware(request: NextRequest) {
 
   // If accessing root path while logged out, redirect to login
   if (request.nextUrl.pathname === "/" && !token) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/auth/login", request.url));
+  }
+
+  if (is404Page) {
+    const response = NextResponse.redirect(new URL("/", request.url));
+    return response;
   }
 
   return NextResponse.next();

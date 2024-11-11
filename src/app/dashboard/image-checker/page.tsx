@@ -8,7 +8,7 @@ export default function ImageCheckerPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-semibold">Image Checker</h1>
         <p className="text-muted-foreground mt-2">
-          Upload an image to check if it&apos;s real or AI-generated.
+          Upload an image to check if it&apos;s real or AI-generated
         </p>
       </div>
 

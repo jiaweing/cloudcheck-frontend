@@ -56,7 +56,7 @@ const usageData = {
 };
 
 const sampleCode = {
-  curl: `curl -X POST ${process.env.NEXT_PUBLIC_APP_URL}/api/v1/check-image \\
+  curl: `curl -X POST ${process.env.NEXT_PUBLIC_FRONTEND_APP_URL}/v1/check-image \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -66,7 +66,7 @@ const sampleCode = {
   python: `import requests
 
 response = requests.post(
-    '${process.env.NEXT_PUBLIC_APP_URL}/api/v1/check-image',
+    '${process.env.NEXT_PUBLIC_FRONTEND_APP_URL}/v1/check-image',
     headers={
         'Authorization': 'Bearer YOUR_API_KEY',
         'Content-Type': 'application/json'
@@ -84,7 +84,7 @@ print(result)`,
 const checkImage = async () => {
   try {
     const response = await axios.post(
-      '${process.env.NEXT_PUBLIC_APP_URL}/api/v1/check-image',
+      '${process.env.NEXT_PUBLIC_FRONTEND_APP_URL}/v1/check-image',
       {
         image_url: 'https://example.com/image.jpg',
         check_type: 'content'

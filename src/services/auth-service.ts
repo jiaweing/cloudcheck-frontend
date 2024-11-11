@@ -17,7 +17,7 @@ const DEMO_USER = {
 };
 
 const client = new UsersServiceClient(
-  process.env.NEXT_PUBLIC_ENVOY_URL || "http://localhost:8080",
+  `${process.env.NEXT_PUBLIC_ENVOY_URL}/auth` || "http://localhost:8080",
   null,
   null
 );
@@ -53,7 +53,7 @@ class AuthService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_ENVOY_URL || "http://localhost:8080";
+    this.baseUrl = `${process.env.NEXT_PUBLIC_ENVOY_URL}/auth` || "http://localhost:8080";
   }
 
   private async tryGrpc<T>(

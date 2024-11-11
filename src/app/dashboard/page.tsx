@@ -1,9 +1,9 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/context/auth-context";
-import { Code, ImageIcon, UserIcon } from "lucide-react";
+import { Code, ImageIcon, UserIcon, LogIn } from "lucide-react";
 import Link from "next/link";
+import { useAuth } from "@/context/auth-context";
 
 interface QuickActionProps {
   title: string;
@@ -31,25 +31,34 @@ function QuickAction({ title, description, icon, href }: QuickActionProps) {
 }
 
 export default function DashboardPage() {
-  const { userId } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   const quickActions = [
     {
+      title: "Login",
+      description: "Login to gain access to our image checking API service",
+      authRequired: -1,
+      icon: <LogIn className="h-8 w-8" />,
+      href: "/auth/login",
+    },
+    {
       title: "Image Checker",
       description: "Check if an image is real or AI-generated",
+      authRequired: 0,
       icon: <ImageIcon className="h-8 w-8" />,
       href: "/dashboard/image-checker",
     },
-
     {
       title: "Profile Settings",
       description: "Manage your account settings",
+      authRequired: 1,
       icon: <UserIcon className="h-8 w-8" />,
       href: "/dashboard/profile",
     },
     {
       title: "API",
       description: "Manage your API keys and integrations",
+      authRequired: 1,
       icon: <Code className="h-8 w-8" />,
       href: "/dashboard/api",
     },
@@ -71,9 +80,13 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {quickActions.map((action) => (
-                <QuickAction key={action.href} {...action} />
-              ))}
+              {quickActions.map((action) =>
+                (isAuthenticated
+                  ? action.authRequired === 0 || action.authRequired === 1
+                  : action.authRequired === 0 || action.authRequired === -1)
+                  ? <QuickAction key={action.href} {...action} />
+                  : null
+              )}
             </div>
           </CardContent>
         </Card>

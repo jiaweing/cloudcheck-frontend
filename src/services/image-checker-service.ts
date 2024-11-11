@@ -1,161 +1,173 @@
-import * as tf from "@tensorflow/tfjs";
+// @ts-nocheck
+
+import * as tf from '@tensorflow/tfjs';
+
+// Constants
+const MODEL_URL = 'https://tfhub.dev/google/tfjs-model/imagenet/mobilenet_v3_small_100_224/feature_vector/5/default/1';
+const SERVER_URL = `${process.env.NEXT_PUBLIC_IMAGE_CLASSIFIER_URL}`;
+const CLASS_NAMES = ['Fake', 'Real'];
+
+let model = undefined;      // Classification head of model (built on top of base model
+let mobilenet = undefined;  // Mobilenet model (base model)
+var training_size = 0;      // Training size (no of images/tensors client model is trained on)
 
 class ImageClassifierService {
-  private model: tf.LayersModel | null = null;
-  private clientModel: tf.LayersModel | null = null;
 
-  async prepare_ml(): Promise<void> {
-    try {
-      // Load the pre-trained model
-      this.model = await tf.loadLayersModel("/models/model.json");
-      console.log("Model loaded successfully");
-    } catch (error) {
-      console.error("Error loading model:", error);
-      throw error;
+    async isModelURLAvailable(url) {
+        try {
+            const response = await fetch(url);
+            return response.ok;
+        } catch (error) {
+            return false;
+        }
     }
-  }
-
-  async classify_image(
-    imageFile: File,
-    threshold: number = 0.5
-  ): Promise<number> {
-    if (!this.model) {
-      throw new Error("Model not loaded");
-    }
-
-    try {
-      // Create an HTMLImageElement from the File
-      const image = await this.createImageElement(imageFile);
-
-      // Preprocess the image
-      const tensor = await this.preprocessImage(image);
-
-      // Make prediction
-      const prediction = (await this.model.predict(tensor)) as tf.Tensor;
-      const result = await prediction.data();
-
-      // Cleanup
-      tensor.dispose();
-      prediction.dispose();
-
-      // Return classification result (0 for fake, 1 for real)
-      return result[0] > threshold ? 1 : 0;
-    } catch (error) {
-      console.error("Error classifying image:", error);
-      throw error;
-    }
-  }
-
-  async train_model(imageFile: File, label: number): Promise<void> {
-    try {
-      // Create a new model for client-side training if not exists
-      if (!this.clientModel) {
-        this.clientModel = await this.createClientModel();
-      }
-
-      // Prepare training data
-      const image = await this.createImageElement(imageFile);
-      const tensor = await this.preprocessImage(image);
-      const labelTensor = tf.tensor1d([label]);
-
-      // Train the model
-      await this.clientModel.fit(tensor, labelTensor, {
-        epochs: 1,
-        batchSize: 1,
-      });
-
-      // Cleanup
-      tensor.dispose();
-      labelTensor.dispose();
-    } catch (error) {
-      console.error("Error training model:", error);
-      throw error;
-    }
-  }
-
-  async upload_model(): Promise<void> {
-    if (!this.clientModel) {
-      throw new Error("No trained client model available");
+    
+     prepare_ml = async () => {
+        if (!model && !mobilenet) {
+            console.log("Preparing model")
+                // Load pre-trained mobilenet model (image feature vectors) from TensorFlowHub
+                mobilenet = await tf.loadGraphModel(MODEL_URL, { fromTFHub: true });
+            
+                // NOTE: Tidy function is used for automatic memory clean ups (clean up all intermediate tensors afterwards to avoid memory leaks)
+                // dispose() to release the WebGL memory allocated for the return value of predict
+                tf.tidy(() => {
+                    // Warm up the model by passing zeros through it once, to make first prediction faster
+                    mobilenet.predict(tf.zeros([1, 224, 224, 3])).dispose();   // Tensor of 1 x 224px x 224px x 3 colour channels (RGB)
+                });
+            
+                // Load model (classification head) from Flask endpoint
+                model = await tf.loadLayersModel(`${SERVER_URL}/get_model/model.json`);
+            
+                // Compile model
+                model.compile({
+                    // Adam changes the learning rate over time which is useful.
+                    optimizer: 'adam',
+                    // Use the correct loss function. If 2 classes of data, must use binaryCrossentropy.
+                    // Else categoricalCrossentropy is used if more than 2 classes.
+                    loss: (CLASS_NAMES.length === 2) ? 'binaryCrossentropy' : 'categoricalCrossentropy',
+                    // As this is a classification problem you can record accuracy in the logs too!
+                    metrics: ['accuracy']
+                });
+            
+        } else {
+            console.log("Model is already loaded")
+        }
+        return;
     }
 
-    try {
-      // Save model weights
-      const weights = await this.clientModel.getWeights();
-      const weightData = weights.map((w) => w.arraySync());
+    readImage = (file) => {
+        return new Promise((resolve, reject) => {
+            // Create a new HTMLImageElement
+            const img = new Image();
+            img.crossOrigin = 'anonymous'; 
+            img.onload = () => resolve(img);    // Resolve the Promise with the loaded image
+            img.onerror = reject;               // Reject the Promise if there's an error loading the image
+        
+            // Use FileReader to read the image file
+            const reader = new FileReader();
+            reader.onload = (e) => {
+            img.src = e.target.result;          // Set the image source to the result of FileReader
+            };
+            reader.onerror = reject;            // Reject the Promise if there's an error reading the file
+            reader.readAsDataURL(file);         // Read the file as a data URL
+        });
+    };
 
-      // Send to server
-      const response = await fetch("/api/model/upload", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ weights: weightData }),
-      });
+    classify_image = async(imageFile, userPrediction) => {
+        console.log("Classifying image...");
 
-      if (!response.ok) {
-        throw new Error("Failed to upload model");
-      }
-    } catch (error) {
-      console.error("Error uploading model:", error);
-      throw error;
+        // Convert file to image data
+        let imageData = await this.readImage(imageFile);
+        let highestIndex = -1;
+        // Classify image
+        tf.tidy(function () {
+            // Create tensor from image
+            let test_tensor = tf.browser.fromPixels(imageData);
+
+            // Resize tensor (value of data is between 0-255) and ensure all values are between 0 and 1 (for inputs into mobilenet model)
+            test_tensor = tf.image.resizeBilinear(test_tensor, [224, 224], true).div(255);
+
+            // Get mobilenet's intermediate predicted outcome for the expanded rank tensor
+            let test_image_features = mobilenet.predict(test_tensor.expandDims());
+
+            // Get classification head's predicted outcome, and remove dimensions of 1 afterwards
+            let prediction = model.predict(test_image_features).squeeze();
+
+            // Find index with highest value and convert tensor into an array
+            highestIndex = prediction.argMax().arraySync();
+
+            // Get prediction scores as an array
+            let predictionArray = prediction.arraySync();
+
+            // Get prediction results
+            let prediction_txt = (userPrediction == highestIndex) ? "Correct " : "Wrong ";
+            prediction_txt += 'Prediction: ' + CLASS_NAMES[highestIndex] + ' with ' + predictionArray[highestIndex] * 100 + '% confidence'
+            console.log(prediction_txt);
+        });
+        console.log("Image classified!");
+        return highestIndex;
     }
-  }
 
-  dispose_models(): void {
-    if (this.model) {
-      this.model.dispose();
-      this.model = null;
+    train_model = async(imageFile, userPrediction) => {
+        // Initialise variables
+        let training_data = [];     // Store image features of training images
+        let training_output = [];   // Store classification output of training images
+
+        // Convert file to image data
+        let imageData = await this.readImage(imageFile);
+        // Augment training tensor for more diversity in training data (instead of just one basic tensor from the image)
+        for(let degree = 0; degree < 360; degree+=15) {
+            // Obtain image features
+            let image_features = tf.tidy(function () {
+                // Create tensor from image
+                let test_tensor = tf.browser.fromPixels(imageData);
+
+                // Augment tensor by rotating it every 15 degrees
+                test_tensor = tf.image.rotateWithOffset(test_tensor.toFloat().expandDims(), degree * (Math.PI / 180)).squeeze();
+
+                // Resize tensor (value of data is between 0-255) and ensure all values are between 0 and 1 (for inputs into mobilenet model)
+                test_tensor = tf.image.resizeBilinear(test_tensor, [224, 224], true).div(255);
+
+                // Get mobilenet's predicted outcome for the expanded rank tensor, and remove dimensions of 1 afterwards
+                return mobilenet.predict(test_tensor.expandDims()).squeeze();
+            });
+            // Append image feature into array of training data
+            training_data.push(image_features);
+            training_output.push(userPrediction);
+            training_size++;
+        }
+        
+        /* Model Training */
+        // Shuffle training data
+        tf.util.shuffleCombo(training_data, training_output);
+        // Convert tensor array into a 1D tensor array
+        let output_tensor = tf.tensor1d(training_output, 'int32');
+        // Convert into a one-hot tensor array
+        let onehot_output = tf.oneHot(output_tensor, CLASS_NAMES.length);
+        // Convert array of tensors into a 2D tensor
+        let input_tensor = tf.stack(training_data);
+
+        // Train classification head
+        console.log("Training model locally on client device..")
+        await model.fit(input_tensor, onehot_output, { shuffle: true, batchSize: 5, epochs: 10, callbacks: { onEpochEnd: (epoch, log) => console.log(epoch, log) } });
+
+        // Dispose temporary tensors to release the WebGL memory allocated
+        output_tensor.dispose();
+        onehot_output.dispose();
+        input_tensor.dispose();
     }
-    if (this.clientModel) {
-      this.clientModel.dispose();
-      this.clientModel = null;
+
+    // Function for uploading client model to the server for federated learning
+    upload_model = async() => {
+        model.setUserDefinedMetadata({"training_size": training_size});
+        await model.save(`${SERVER_URL}/upload_model`);
+        alert("Model uploaded for federated learning!");
     }
-  }
 
-  private async createImageElement(file: File): Promise<HTMLImageElement> {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
-    });
-  }
-
-  private async preprocessImage(image: HTMLImageElement): Promise<tf.Tensor> {
-    // Convert image to tensor and preprocess
-    return tf.tidy(() => {
-      const tensor = tf.browser
-        .fromPixels(image)
-        .resizeNearestNeighbor([224, 224]) // Resize to model input size
-        .toFloat()
-        .expandDims();
-      return tensor.div(255.0); // Normalize pixel values
-    });
-  }
-
-  private async createClientModel(): Promise<tf.LayersModel> {
-    const model = tf.sequential({
-      layers: [
-        tf.layers.conv2d({
-          inputShape: [224, 224, 3],
-          kernelSize: 3,
-          filters: 16,
-          activation: "relu",
-        }),
-        tf.layers.maxPooling2d({ poolSize: 2 }),
-        tf.layers.flatten(),
-        tf.layers.dense({ units: 1, activation: "sigmoid" }),
-      ],
-    });
-
-    model.compile({
-      optimizer: tf.train.adam(0.001),
-      loss: "binaryCrossentropy",
-      metrics: ["accuracy"],
-    });
-
-    return model;
-  }
+    dispose_models = () => {
+        model = undefined;
+        mobilenet = undefined;
+    }
 }
 
 export default new ImageClassifierService();

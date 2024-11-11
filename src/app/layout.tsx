@@ -1,11 +1,11 @@
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AuthProvider } from "@/context/auth-context";
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Rethink_Sans } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const rethinkSans = Rethink_Sans({ subsets: ["latin"] });
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -40,7 +40,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={rethinkSans.className}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

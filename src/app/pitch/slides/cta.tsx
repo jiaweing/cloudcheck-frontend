@@ -11,7 +11,7 @@ export default function CTA() {
         <h1 className="text-2xl md:text-5xl font-medium text-center max-w-2xl">
           Detect the undetectable. Trust every pixel.
         </h1>
-        <Link href={process.env.NEXT_PUBLIC_APP_URL ?? "/"}>
+        <Link href={process.env.NEXT_PUBLIC_FRONTEND_APP_URL ?? "/"}>
           <Button size="lg">Get Started</Button>
         </Link>
       </div>

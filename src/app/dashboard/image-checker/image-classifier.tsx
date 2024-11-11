@@ -1,6 +1,5 @@
 "use client";
 
-import { FileUploader } from "@/components/file-uploader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -13,8 +12,9 @@ import {
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import ImageClassifierService from "@/services/image-checker-service";
+import { ThumbsDown, ThumbsUp, Upload } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 export default function ImageClassifier() {
@@ -26,33 +26,58 @@ export default function ImageClassifier() {
   const [isModelLoading, setIsModelLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [isTrainingModel, setIsTrainingModel] = useState(false);
+  const [updatedClassification, setUpdatedClassification] = useState(false);
 
-  const handleImageUpload = async (files: File[]) => {
-    const file = files[0];
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageChange = (file: File | null) => {
     if (file) {
       setSelectedImage(file);
       setClassificationResult(null);
-      // Automatically classify the image when uploaded
-      await classifyImage(file);
+      setUpdatedClassification(false);
     }
   };
 
-  const classifyImage = async (imageFile: File = selectedImage!) => {
-    if (imageFile) {
+  const classifyImage = async () => {
+    if (selectedImage) {
       setIsClassifying(true);
       try {
         const result = await ImageClassifierService.classify_image(
-          imageFile,
+          selectedImage,
           0
         );
-        setClassificationResult(result === 0 ? "Fake" : "Real");
-        toast.success(`Image classified as: ${result === 0 ? "Fake" : "Real"}`);
+        const resultText = result === 0 ? "Fake" : "Real";
+        setClassificationResult(resultText);
+        toast.success(`Image classified as: ${resultText}`);
       } catch (error) {
         console.error("Error classifying image:", error);
         setClassificationResult("Error occurred during classification");
         toast.error("Failed to classify image");
+      } finally {
+        setIsClassifying(false);
       }
-      setIsClassifying(false);
+    }
+  };
+
+  const acceptClassification = async () => {
+    setIsTrainingModel(true);
+
+    try {
+      if (selectedImage) {
+        await ImageClassifierService.train_model(
+          selectedImage,
+          classificationResult === "Real" ? 1 : 0
+        );
+        await ImageClassifierService.upload_model();
+        setClassificationResult(`${classificationResult} (Accepted)`);
+        toast.success("Your feedback has been recorded");
+        setUpdatedClassification(true);
+      }
+    } catch (error) {
+      console.error("Error accepting classification:", error);
+      toast.error("Failed to process feedback");
+    } finally {
+      setIsTrainingModel(false);
     }
   };
 
@@ -62,15 +87,14 @@ export default function ImageClassifier() {
 
     try {
       if (selectedImage) {
-        // Train client side model
         await ImageClassifierService.train_model(
           selectedImage,
           classificationResult === "Real" ? 0 : 1
         );
-        // Upload model
         await ImageClassifierService.upload_model();
         setClassificationResult(`${classificationResult} (Disputed)`);
         toast.success("Your feedback has been recorded");
+        setUpdatedClassification(true);
       }
     } catch (error) {
       console.error("Error disputing classification:", error);
@@ -100,6 +124,18 @@ export default function ImageClassifier() {
     };
   }, []);
 
+  const handleDrop = (event: React.DragEvent) => {
+    event.preventDefault();
+    const file = event.dataTransfer.files[0];
+    if (file) {
+      handleImageChange(file);
+    }
+  };
+
+  const handleDragOver = (event: React.DragEvent) => {
+    event.preventDefault();
+  };
+
   return (
     <>
       <Card>
@@ -113,48 +149,107 @@ export default function ImageClassifier() {
               <p className="text-muted-foreground">Loading Image Checker...</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              <FileUploader
-                maxFileCount={1}
-                maxSize={5 * 1024 * 1024}
-                accept={{ "image/*": [] }}
-                onUpload={handleImageUpload}
-                disabled={isClassifying || isTrainingModel}
+            <div className="flex flex-col gap-2">
+              <div>
+                {selectedImage && (
+                  <Button
+                    onClick={classifyImage}
+                    disabled={isClassifying || isTrainingModel}
+                    className="relative me-2"
+                  >
+                    {isClassifying ? "Checking..." : "Check Image"}
+                    {!classificationResult && (
+                      <span className="absolute top-1/6 right-1/6 h-4/6 w-4/6 bg-blue-500 rounded-md opacity-50 animate-ping z-0" />
+                    )}
+                  </Button>
+                )}
+                <Button
+                  onClick={() => inputRef.current?.click()}
+                  variant="outline"
+                >
+                  Choose Image
+                </Button>
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleImageChange(e.target.files?.[0] || null)}
+                className="hidden"
+                ref={inputRef}
               />
-
-              {selectedImage && (
-                <div className="mt-4">
-                  <div className="relative w-full h-[200px]">
-                    <Image
-                      src={URL.createObjectURL(selectedImage)}
-                      alt="Selected Image"
-                      fill
-                      className="object-contain"
-                    />
+              <div
+                className={`group relative grid h-96 w-full cursor-pointer place-items-center rounded-lg border-2 border-dashed border-muted-foreground/25 px-5 py-5 text-center transition hover:bg-muted/25 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${!selectedImage ? "bg-muted" : ""}`}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onClick={() => inputRef.current?.click()}
+              >
+                {selectedImage ? (
+                  <div className="my-4 gap-2 flex flex-col w-full h-full rounded-md">
+                    <div className="relative w-full h-full rounded-md">
+                      <Image
+                        src={URL.createObjectURL(selectedImage)}
+                        alt="Selected Image"
+                        fill
+                        className="object-contain"
+                      />
+                    </div>
+                    {/* <p className="text-sm text-muted-foreground/70">
+                      Drag {`'n'`} drop an image here, or click to change image
+                    </p> */}
                   </div>
-                </div>
-              )}
-
-              {selectedImage && classificationResult && (
-                <div className="mt-4 space-y-4">
-                  <div className="p-4 bg-muted rounded-lg">
-                    <h3 className="font-semibold mb-2">
-                      Classification Result:
-                    </h3>
-                    <p>{classificationResult}</p>
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-4 sm:px-5">
+                    <div className="rounded-full border border-dashed p-3">
+                      <Upload
+                        className="size-7 text-muted-foreground"
+                        aria-hidden="true"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-px">
+                      <p className="font-medium text-muted-foreground">
+                        Drag {`'n'`} drop an image here, or click to select
+                        image
+                      </p>
+                      <p className="text-sm text-muted-foreground/70">
+                        You can upload an image with 5 MB.
+                      </p>
+                    </div>
                   </div>
+                )}
+              </div>
+              {classificationResult && (
+                <div className="mt-4 space-y-4 flex flex-col items-center">
+                  <p className="text-xl font-semibold leading-none tracking-tight">
+                    Classification Result
+                  </p>
+                  <p
+                    className={`text-4xl text-center font-bold m-0 ${classificationResult === "Real" || classificationResult === "Real (Accepted)" ? "text-green-600" : "text-red-600"}`}
+                  >
+                    {classificationResult}
+                  </p>
 
-                  {(classificationResult === "Real" ||
-                    classificationResult === "Fake") && (
-                    <Button
-                      variant="destructive"
-                      onClick={() => setOpenDialog(true)}
-                      disabled={isTrainingModel}
-                    >
-                      {isTrainingModel
-                        ? "Processing Dispute..."
-                        : "Dispute Classification"}
-                    </Button>
+                  {!updatedClassification && (
+                    <>
+                      <p className="text-lg mt-4">
+                        Was this prediction accurate?
+                      </p>
+                      <div className="flex space-x-4">
+                        <Button
+                          variant="outline"
+                          onClick={acceptClassification}
+                          disabled={isTrainingModel}
+                        >
+                          <ThumbsUp className="mr-2 h-5 w-5" /> Yes
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => setOpenDialog(true)}
+                          disabled={isTrainingModel}
+                        >
+                          <ThumbsDown className="mr-2 h-5 w-5" /> No
+                        </Button>
+                      </div>
+                    </>
                   )}
                 </div>
               )}

@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUserId(null);
 
     // Force a hard navigation to ensure middleware runs
-    window.location.href = "/login";
+    window.location.href = "/auth/login";
   };
 
   const value = {
