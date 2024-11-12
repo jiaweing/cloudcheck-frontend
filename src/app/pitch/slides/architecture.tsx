@@ -12,6 +12,7 @@ export default function Architecture() {
               alt="System Architecture Diagram"
               layout="fill"
               objectFit="contain"
+              className="dark:invert"
             />
           </div>
         </div>
