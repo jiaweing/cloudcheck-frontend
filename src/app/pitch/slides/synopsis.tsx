@@ -51,19 +51,6 @@ export default function Synopsis() {
             <h2 className="text-sm md:text-base font-medium">Background</h2>
           </motion.div>
 
-          {/* System Design */}
-          <motion.div
-            className="flex flex-col items-center"
-            variants={{
-              hidden: { opacity: 0, y: 10 },
-              visible: { opacity: 1, y: 0 },
-            }}
-            transition={{ duration: 0.8 }}
-          >
-            <Cpu size={48} className="mb-2 text-muted-foreground" />
-            <h2 className="text-sm md:text-base font-medium">System Design</h2>
-          </motion.div>
-
           {/* Functionalities */}
           <motion.div
             className="flex flex-col items-center"
@@ -77,6 +64,19 @@ export default function Synopsis() {
             <h2 className="text-sm md:text-base font-medium">
               Functionalities
             </h2>
+          </motion.div>
+
+          {/* System Design */}
+          <motion.div
+            className="flex flex-col items-center"
+            variants={{
+              hidden: { opacity: 0, y: 10 },
+              visible: { opacity: 1, y: 0 },
+            }}
+            transition={{ duration: 0.8 }}
+          >
+            <Cpu size={48} className="mb-2 text-muted-foreground" />
+            <h2 className="text-sm md:text-base font-medium">System Design</h2>
           </motion.div>
 
           {/* Microservices & Architecture */}

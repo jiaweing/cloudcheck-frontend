@@ -20,25 +20,10 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Copy, Key, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-// Simulated data
-const initialApiKeys = [
-  {
-    id: "1",
-    name: "Production API Key",
-    key: "sk_live_51NxXa...",
-    created: "2023-10-01",
-    lastUsed: "2023-10-15",
-  },
-  {
-    id: "2",
-    name: "Development API Key",
-    key: "sk_test_51NxXa...",
-    created: "2023-09-15",
-    lastUsed: "2023-10-14",
-  },
-];
+import { useAuth } from "@/context/auth-context";
+import { createApiKey, deleteApiKey, getApiKeys, APIKey } from "@/services/api-service";
 
 const usageData = {
   currentMonth: {
@@ -56,24 +41,22 @@ const usageData = {
 };
 
 const sampleCode = {
-  curl: `curl -X POST ${process.env.NEXT_PUBLIC_FRONTEND_APP_URL}/v1/check-image \\
+  curl: `curl -X POST ${process.env.NEXT_PUBLIC_API_URL}/v1/check-image \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "image_url": "https://example.com/image.jpg",
-    "check_type": "content"
+    "image_url": "https://example.com/image.jpg"
   }'`,
   python: `import requests
 
 response = requests.post(
-    '${process.env.NEXT_PUBLIC_FRONTEND_APP_URL}/v1/check-image',
+    '${process.env.NEXT_PUBLIC_API_URL}/v1/check-image',
     headers={
         'Authorization': 'Bearer YOUR_API_KEY',
         'Content-Type': 'application/json'
     },
     json={
-        'image_url': 'https://example.com/image.jpg',
-        'check_type': 'content'
+        'image_url': 'https://example.com/image.jpg'
     }
 )
 
@@ -84,10 +67,9 @@ print(result)`,
 const checkImage = async () => {
   try {
     const response = await axios.post(
-      '${process.env.NEXT_PUBLIC_FRONTEND_APP_URL}/v1/check-image',
+      '${process.env.NEXT_PUBLIC_API_URL}/v1/check-image',
       {
-        image_url: 'https://example.com/image.jpg',
-        check_type: 'content'
+        image_url: 'https://example.com/image.jpg'
       },
       {
         headers: {
@@ -104,22 +86,46 @@ const checkImage = async () => {
 }`,
 };
 
-export default function ApiPage() {
-  const [apiKeys, setApiKeys] = useState(initialApiKeys);
+const REQUEST_COST = 0.005; // cost per request in USD
+const REQUEST_QUOTA = 20000; // Example quota
 
-  const handleAddKey = () => {
-    const newKey = {
-      id: String(apiKeys.length + 1),
-      name: `API Key ${apiKeys.length + 1}`,
-      key: `sk_test_${Math.random().toString(36).substring(2, 15)}`,
-      created: new Date().toISOString().split("T")[0],
-      lastUsed: "-",
+export default function ApiPage() {
+  const { userId } = useAuth();
+
+  if (!userId) return null;
+
+  const [apiKeys, setApiKeys] = useState<APIKey[]>([]);
+  const [totalRequests, setTotalRequests] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchApiKeys = async () => {
+      try {
+        const keys = await getApiKeys(userId);
+        setApiKeys(keys);
+        setTotalRequests(keys.reduce((sum, key) => sum + (key.usage_count || 0), 0));
+      } catch (error) {
+        console.error("Error fetching API keys:", error);
+      }
     };
-    setApiKeys([...apiKeys, newKey]);
+    fetchApiKeys();
+  }, [userId]);
+
+  const handleAddKey = async () => {
+    try {
+      const { key } = await createApiKey(userId, `API Key ${apiKeys.length + 1}`);
+      setApiKeys([...apiKeys, { id: apiKeys.length + 1, name: `API Key ${apiKeys.length + 1}`, key, created_at: new Date().toISOString(), last_used: null }]);
+    } catch (error) {
+      console.error("Error creating API key:", error);
+    }
   };
 
-  const handleRevokeKey = (id: string) => {
-    setApiKeys(apiKeys.filter((key) => key.id !== id));
+  const handleRevokeKey = async (id: number) => {
+    try {
+      await deleteApiKey(id);
+      setApiKeys(apiKeys.filter((key) => key.id !== id));
+    } catch (error) {
+      console.error("Error deleting API key:", error);
+    }
   };
 
   return (
@@ -143,15 +149,14 @@ export default function ApiPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Requests</span>
                   <span className="font-medium">
-                    {usageData.currentMonth.requests.toLocaleString()} /{" "}
-                    {usageData.currentMonth.quota.toLocaleString()}
+                    {totalRequests} / {REQUEST_QUOTA}
                   </span>
                 </div>
                 <div className="h-2 rounded-full bg-secondary">
                   <div
                     className="h-2 rounded-full bg-primary"
                     style={{
-                      width: `${(usageData.currentMonth.requests / usageData.currentMonth.quota) * 100}%`,
+                      width: `${(totalRequests / REQUEST_QUOTA) * 100}%`,
                     }}
                   />
                 </div>
@@ -166,11 +171,9 @@ export default function ApiPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ${usageData.currentMonth.cost.toFixed(2)}
+                ${(totalRequests * REQUEST_COST).toFixed(2)}
               </div>
-              <p className="text-xs text-muted-foreground">
-                $0.005 per request
-              </p>
+              <p className="text-xs text-muted-foreground">${REQUEST_COST} per request</p>
             </CardContent>
           </Card>
 
@@ -207,9 +210,7 @@ export default function ApiPage() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>API Keys</CardTitle>
-                <CardDescription>
-                  Manage your API keys for authentication
-                </CardDescription>
+                <CardDescription>Manage your API keys for authentication</CardDescription>
               </div>
               <Button onClick={handleAddKey}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -245,8 +246,8 @@ export default function ApiPage() {
                         <Copy className="h-4 w-4" />
                       </Button>
                     </TableCell>
-                    <TableCell>{key.created}</TableCell>
-                    <TableCell>{key.lastUsed}</TableCell>
+                    <TableCell>{key.created_at}</TableCell>
+                    <TableCell>{key.last_used || "-"}</TableCell>
                     <TableCell>
                       <Button
                         variant="ghost"
@@ -266,17 +267,14 @@ export default function ApiPage() {
         <Card>
           <CardHeader>
             <CardTitle>API Documentation</CardTitle>
-            <CardDescription>
-              Examples of how to use the CloudCheck API
-            </CardDescription>
+            <CardDescription>Examples of how to use the CloudCheck API</CardDescription>
           </CardHeader>
           <CardContent>
             <Alert>
               <Key className="h-4 w-4" />
               <AlertTitle>Authentication</AlertTitle>
               <AlertDescription>
-                All API requests require authentication using your API key in
-                the Authorization header.
+                All API requests require authentication using your API key in the Authorization header.
               </AlertDescription>
             </Alert>
 

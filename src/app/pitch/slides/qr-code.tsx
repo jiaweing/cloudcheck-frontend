@@ -3,7 +3,7 @@ import { ScanTextIcon } from "lucide-react";
 import QRCode from "react-qr-code";
 
 export default function QRCodeSlide() {
-  const pitchUrl = `${process.env.NEXT_PUBLIC_FRONTEND_APP_URL}/pitch`;
+  const pitchUrl = "https://cloudcheckapp.vercel.app/pitch";
   return (
     <CarouselItem>
       <div className="w-full min-h-screen bg-background flex flex-col items-center justify-center gap-6">
