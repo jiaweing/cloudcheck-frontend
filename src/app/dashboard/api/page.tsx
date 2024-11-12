@@ -23,7 +23,12 @@ import { Copy, Key, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/context/auth-context";
-import { createApiKey, deleteApiKey, getApiKeys, APIKey } from "@/services/api-service";
+import {
+  APIKey,
+  createApiKey,
+  deleteApiKey,
+  getApiKeys,
+} from "@/services/api-service";
 
 const usageData = {
   currentMonth: {
@@ -91,18 +96,19 @@ const REQUEST_QUOTA = 20000; // Example quota
 
 export default function ApiPage() {
   const { userId } = useAuth();
-
-  if (!userId) return null;
-
   const [apiKeys, setApiKeys] = useState<APIKey[]>([]);
   const [totalRequests, setTotalRequests] = useState<number>(0);
 
   useEffect(() => {
     const fetchApiKeys = async () => {
+      if (!userId) return;
+
       try {
         const keys = await getApiKeys(userId);
         setApiKeys(keys);
-        setTotalRequests(keys.reduce((sum, key) => sum + (key.usage_count || 0), 0));
+        setTotalRequests(
+          keys.reduce((sum, key) => sum + (key.usage_count || 0), 0)
+        );
       } catch (error) {
         console.error("Error fetching API keys:", error);
       }
@@ -111,9 +117,23 @@ export default function ApiPage() {
   }, [userId]);
 
   const handleAddKey = async () => {
+    if (!userId) return;
+
     try {
-      const { key } = await createApiKey(userId, `API Key ${apiKeys.length + 1}`);
-      setApiKeys([...apiKeys, { id: apiKeys.length + 1, name: `API Key ${apiKeys.length + 1}`, key, created_at: new Date().toISOString(), last_used: null }]);
+      const { key } = await createApiKey(
+        userId,
+        `API Key ${apiKeys.length + 1}`
+      );
+      setApiKeys([
+        ...apiKeys,
+        {
+          id: apiKeys.length + 1,
+          name: `API Key ${apiKeys.length + 1}`,
+          key,
+          created_at: new Date().toISOString(),
+          last_used: null,
+        },
+      ]);
     } catch (error) {
       console.error("Error creating API key:", error);
     }
@@ -127,6 +147,8 @@ export default function ApiPage() {
       console.error("Error deleting API key:", error);
     }
   };
+
+  if (!userId) return null;
 
   return (
     <div className="overflow-x-hidden">
@@ -173,7 +195,9 @@ export default function ApiPage() {
               <div className="text-2xl font-bold">
                 ${(totalRequests * REQUEST_COST).toFixed(2)}
               </div>
-              <p className="text-xs text-muted-foreground">${REQUEST_COST} per request</p>
+              <p className="text-xs text-muted-foreground">
+                ${REQUEST_COST} per request
+              </p>
             </CardContent>
           </Card>
 
@@ -210,7 +234,9 @@ export default function ApiPage() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>API Keys</CardTitle>
-                <CardDescription>Manage your API keys for authentication</CardDescription>
+                <CardDescription>
+                  Manage your API keys for authentication
+                </CardDescription>
               </div>
               <Button onClick={handleAddKey}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -267,14 +293,17 @@ export default function ApiPage() {
         <Card>
           <CardHeader>
             <CardTitle>API Documentation</CardTitle>
-            <CardDescription>Examples of how to use the CloudCheck API</CardDescription>
+            <CardDescription>
+              Examples of how to use the CloudCheck API
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Alert>
               <Key className="h-4 w-4" />
               <AlertTitle>Authentication</AlertTitle>
               <AlertDescription>
-                All API requests require authentication using your API key in the Authorization header.
+                All API requests require authentication using your API key in
+                the Authorization header.
               </AlertDescription>
             </Alert>
 
